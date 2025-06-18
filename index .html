@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>حاسبة المصروفات</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>حاسبة المصروفات الشهرية</h1>
+
+    <form id="expense-form">
+        <input type="text" id="name" placeholder="نوع المصروف (مثلاً: إيجار)" required>
+        <input type="number" id="amount" placeholder="القيمة (ريال)" required>
+        <button type="submit">إضافة</button>
+    </form>
+
+    <ul id="expense-list"></ul>
+
+    <h3>الإجمالي: <span id="total">0</span> ريال</h3>
+
+    <script src="script.js"></script>
+</body>
+</html>
