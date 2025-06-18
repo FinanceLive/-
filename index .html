@@ -3,7 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <title>حاسبة المصروفات</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: center;
+            background-color: #f8f8f8;
+            padding: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #ffffff;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>حاسبة المصروفات الشهرية</h1>
@@ -18,6 +44,33 @@
 
     <h3>الإجمالي: <span id="total">0</span> ريال</h3>
 
-    <script src="script.js"></script>
+    <script>
+        const form = document.getElementById("expense-form");
+        const nameInput = document.getElementById("name");
+        const amountInput = document.getElementById("amount");
+        const list = document.getElementById("expense-list");
+        const total = document.getElementById("total");
+
+        let totalAmount = 0;
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            const name = nameInput.value;
+            const amount = parseFloat(amountInput.value);
+
+            if (name && !isNaN(amount)) {
+                const li = document.createElement("li");
+                li.textContent = `${name} - ${amount.toFixed(2)} ريال`;
+                list.appendChild(li);
+
+                totalAmount += amount;
+                total.textContent = totalAmount.toFixed(2);
+
+                nameInput.value = "";
+                amountInput.value = "";
+            }
+        });
+    </script>
 </body>
 </html>
