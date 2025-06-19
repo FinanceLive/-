@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>حاسبة المصروفات الشهرية</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      text-align: center;
+      background-color: #f0f0f0;
+      color: #000;
+      padding: 20px;
+      font-size: 18px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark {
+      background-color: #121212;
+      color: #fff;
+    }
+    input, button, select {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      background-color: white;
+      margin: 5px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    body.dark li {
+      background-color: #333;
+    }
+    button.delete {
+      background-color: red;
+      color: white;
+      margin-right: 10px;
+      border: none;
+    }
+    canvas {
+      margin-top: 30px;
+      max-width: 600px;
+    }
+    .top-controls {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="title">حاسبة المصروفات الشهرية</h1>
+
+  <div class="top-controls">
+    <button onclick="toggleLang()">🌐 اللغة</button>
+    <button onclick="toggleDark()">🌙 الوضع الداكن</button>
+  </div>
+
+  <p><span id="budgetLabel">الميزانية:</span> <input type="number" id="budget" placeholder="مثلاً 1000" /></p>
+  <p id="warning" style="color: red;"></p>
+  <p><span id="remainingLabel">المتبقي:</span> <span id="remaining">0</span> <span id="currency">ريال</span></p>
+
+  <form id="form">
+    <input id="name" placeholder="نوع المصروف" required />
+    <input id="amount" type="number" placeholder="القيمة" required />
+    <select id="category" required>
+      <option value="">اختر التصنيف</option>
+      <option value="طعام">🍔 طعام</option>
+      <option value="إيجار">🏠 إيجار</option>
+      <option value="مواصلات">🚗 مواصلات</option>
+      <option value="فواتير">💡 فواتير</option>
+      <option value="ترفيه">🎮 ترفيه</option>
+      <option value="أخرى">🛠 أخرى</option>
+    </select>
+    <button type="submit" id="addBtn">إضافة</button>
+  </form>
+
+  <ul id="list"></ul>
+
+  <h3><span id="totalLabel">الإجمالي:</span> <span id="total">0</span> <span id="currency2">ريال</span></h3>
+  <h4><span id="monthLabel">سجل شهر</span> <span id="month"></span></h4>
+
+  <canvas id="chart"></canvas>
+
+  <button onclick="exportToCSV()">📥 تصدير إلى Excel</button>
+
+  <script>
+    const form = document.getElementById("form");
+    const nameInput = document.getElementById("name");
+    const amountInput = document.getElementById("amount");
+    const categoryInput = document.getElementById("category");
+    const list = document.getElementById("list");
+    const total = document.getElementById("total");
+    const remaining = document.getElementById("remaining");
+    const budgetInput = document.getElementById("budget");
+    const warning = document.getElementById("warning");
+    const monthSpan = document.getElementById("month");
+    const chartCanvas = document.getElementById("chart");
+
+    const monthKey = new Date().toISOString().slice(0, 7);
+    monthSpan.textContent = monthKey;
+
+    let expenses = [];
+
+    function updateDisplay() {
+      let sum = expenses.reduce((acc, e) => acc + e.amount, 0);
+      total.textContent = sum.toFixed(2);
+
+      let budget = parseFloat(budgetInput.value);
+      if (!isNaN(budget)) {
+        remaining.textContent = (budget - sum).toFixed(2);
+        warning.textContent = sum > budget ? "🚨 تم تجاوز الميزانية!" : "";
+      } else {
+        remaining.textContent = "0";
+        warning.textContent = "";
+      }
+
+      renderChart();
+    }
+
+    function saveData() {
+      localStorage.setItem("expenses_" + monthKey, JSON.stringify(expenses));
+    }
+
+    function renderList() {
+      list.innerHTML = "";
+      expenses.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${item.name}: ${item.amount} (${item.category}) بتاريخ ${item.date}`;
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = lang === 'ar' ? "حذف" : "Delete";
+        delBtn.className = "delete";
+        delBtn.onclick = () => {
+          expenses.splice(index, 1);
+          saveData();
+          renderList();
+          updateDisplay();
+        };
+
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
+    }
+
+    function renderChart() {
+      const ctx = chartCanvas.getContext("2d");
+      const categories = {};
+      expenses.forEach(e => {
+        categories[e.category] = (categories[e.category] || 0) + e.amount;
+      });
+
+      const labels = Object.keys(categories);
+      const data = Object.values(categories);
+
+      if (window.expenseChart) window.expenseChart.destroy();
+
+      window.expenseChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "المصاريف حسب النوع",
+            data: data,
+            backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#8BC34A", "#FF9800", "#9C27B0"]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+
+    function exportToCSV() {
+      let csv = lang === 'ar' ? "النوع,القيمة,التصنيف,التاريخ\n" : "Name,Amount,Category,Date\n";
+      expenses.forEach(e => {
+        csv += `${e.name},${e.amount},${e.category},${e.date}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "expenses_" + monthKey + ".csv");
+      link.click();
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameInput.value;
+      const amount = parseFloat(amountInput.value);
+      const category = categoryInput.value;
+      const date = new Date().toLocaleDateString("ar-EG");
+
+      if (name && !isNaN(amount) && category) {
+        expenses.push({ name, amount, category, date });
+        nameInput.value = "";
+        amountInput.value = "";
+        categoryInput.value = "";
+        saveData();
+        renderList();
+        updateDisplay();
+      }
+    });
+
+    budgetInput.addEventListener("input", updateDisplay);
+
+    window.addEventListener("load", () => {
+      expenses = JSON.parse(localStorage.getItem("expenses_" + monthKey) || "[]");
+      renderList();
+      updateDisplay();
+      if (localStorage.getItem("darkMode") === "true") {
+        document.body.classList.add("dark");
+      }
+    });
+
+    function toggleDark() {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    }
+
+    let lang = 'ar';
+    function toggleLang() {
+      lang = lang === 'ar' ? 'en' : 'ar';
+      const t = (ar, en) => lang === 'ar' ? ar : en;
+      document.getElementById("title").textContent = t("حاسبة المصروفات الشهرية", "Expense Tracker");
+      document.getElementById("budgetLabel").textContent = t("الميزانية:", "Budget:");
+      document.getElementById("remainingLabel").textContent = t("المتبقي:", "Remaining:");
+      document.getElementById("currency").textContent = t("ريال", "SAR");
+      document.getElementById("currency2").textContent = t("ريال", "SAR");
+      document.getElementById("totalLabel").textContent = t("الإجمالي:", "Total:");
+      document.getElementById("monthLabel").textContent = t("سجل شهر", "Month:");
+      document.getElementById("addBtn").textContent = t("إضافة", "Add");
+      renderList();
+    }
+  </script>
+</body>
+</html>
