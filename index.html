@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>حاسبة المصروفات</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: center;
+            background-color: #f8f8f8;
+            padding: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #ffffff;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        button.delete {
+            background-color: red;
+            color: white;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>حاسبة المصروفات الشهرية</h1>
+
+    <p>الميزانية: <input type="number" id="budget" placeholder="مثلاً 1000 ريال" /></p>
+    <p id="warning" style="color: red;"></p>
+
+    <form id="form">
+        <input id="name" placeholder="نوع المصروف" required />
+        <input id="amount" type="number" placeholder="القيمة" required />
+        <button type="submit">إضافة</button>
+    </form>
+
+    <ul id="list"></ul>
+
+    <h3>الإجمالي: <span id="total">0</span> ريال</h3>
+
+    <script>
+        const form = document.getElementById("form");
+        const nameInput = document.getElementById("name");
+        const amountInput = document.getElementById("amount");
+        const list = document.getElementById("list");
+        const total = document.getElementById("total");
+        const budgetInput = document.getElementById("budget");
+        const warning = document.getElementById("warning");
+
+        let sum = 0;
+
+        function addExpense(name, amount) {
+            const li = document.createElement("li");
+            li.textContent = `${name}: ${amount} ريال `;
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "حذف";
+            delBtn.className = "delete";
+            delBtn.onclick = () => {
+                li.remove();
+                sum -= amount;
+                total.textContent = sum.toFixed(2);
+                saveToLocalStorage();
+                checkBudget();
+            };
+
+            li.appendChild(delBtn);
+            list.appendChild(li);
+        }
+
+        function saveToLocalStorage() {
+            const items = [];
+            list.querySelectorAll("li").forEach(li => {
+                const text = li.firstChild.textContent;
+                const [name, amountText] = text.split(":");
+                const amount = parseFloat(amountText.replace(" ريال", "").trim());
+                items.push({ name: name.trim(), amount });
+            });
+            localStorage.setItem("expenses", JSON.stringify(items));
+        }
+
+        function checkBudget() {
+            const budget = parseFloat(budgetInput.value);
+            if (!isNaN(budget) && sum > budget) {
+                warning.textContent = "🚨 تم تجاوز الميزانية!";
+            } else {
+                warning.textContent = "";
+            }
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const name = nameInput.value;
+            const amount = parseFloat(amountInput.value);
+
+            if (name && !isNaN(amount)) {
+                addExpense(name, amount);
+                sum += amount;
+                total.textContent = sum.toFixed(2);
+                saveToLocalStorage();
+                checkBudget();
+                nameInput.value = "";
+                amountInput.value = "";
+            }
+        });
+
+        window.addEventListener("load", () => {
+            const saved = JSON.parse(localStorage.getItem("expenses") || "[]");
+            saved.forEach(item => {
+                addExpense(item.name, item.amount);
+                sum += item.amount;
+            });
+            total.textContent = sum.toFixed(2);
+            checkBudget();
+        });
+    </script>
+</body>
+</html>
